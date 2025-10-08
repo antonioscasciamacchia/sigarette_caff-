@@ -19,7 +19,7 @@
             width: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #2d3748;
+            background: #1a202c; /* Colore più scuro per il track */
         }
         ::-webkit-scrollbar-thumb {
             background: #4a5568;
@@ -71,12 +71,21 @@
                 Resetta
         </button>
 
-        <!-- Cronologia -->
-        <div class="space-y-4">
-            <h2 class="text-xl font-semibold border-b border-gray-700 pb-2">Cronologia</h2>
-            <div id="elenco-transazioni" class="max-h-60 overflow-y-auto space-y-3 pr-2">
-                <!-- Le transazioni verranno inserite qui da JavaScript -->
-                 <p id="nessuna-transazione" class="text-gray-500 text-center py-4">Nessuna operazione registrata.</p>
+        <!-- Cronologie Separate -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+            <!-- Elenco Sigarette -->
+            <div class="space-y-2">
+                <h2 class="text-lg font-semibold border-b border-gray-700 pb-1 text-center">Sigarette Prestate</h2>
+                <div id="elenco-sigarette" class="h-48 overflow-y-auto space-y-2 p-2 bg-gray-900 rounded-lg">
+                    <!-- Contenuto generato da JS -->
+                </div>
+            </div>
+            <!-- Elenco Caffè -->
+            <div class="space-y-2">
+                <h2 class="text-lg font-semibold border-b border-gray-700 pb-1 text-center">Caffè Offerti</h2>
+                <div id="elenco-caffe" class="h-48 overflow-y-auto space-y-2 p-2 bg-gray-900 rounded-lg">
+                    <!-- Contenuto generato da JS -->
+                </div>
             </div>
         </div>
 
@@ -91,7 +100,8 @@
             const saldoDisplay = document.getElementById('saldo-attuale');
             const conteggioSigaretteDisplay = document.getElementById('conteggio-sigarette');
             const conteggioCaffeDisplay = document.getElementById('conteggio-caffe');
-            const elencoDisplay = document.getElementById('elenco-transazioni');
+            const elencoSigaretteDisplay = document.getElementById('elenco-sigarette');
+            const elencoCaffeDisplay = document.getElementById('elenco-caffe');
             const aggiungiSigarettaBtn = document.getElementById('aggiungi-sigaretta');
             const aggiungiCaffeBtn = document.getElementById('aggiungi-caffe');
             const resetBtn = document.getElementById('reset-contatore');
@@ -99,23 +109,37 @@
             // Carica i dati dal localStorage o inizializza un array vuoto
             let transazioni = JSON.parse(localStorage.getItem('transazioniContatore')) || [];
 
+            // Funzione per creare un elemento della lista
+            const creaElementoLista = (transazione) => {
+                const dataTransazione = new Date(transazione.timestamp);
+                const dataFormattata = dataTransazione.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+                const oraFormattata = dataTransazione.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+
+                const testo = `${dataFormattata} - ${oraFormattata}`;
+                
+                const elementoLista = document.createElement('div');
+                elementoLista.className = 'bg-gray-700 p-2 rounded-lg text-center animate-fade-in';
+                
+                const spanTesto = document.createElement('span');
+                spanTesto.className = 'text-gray-300 text-sm';
+                spanTesto.textContent = testo;
+                
+                elementoLista.appendChild(spanTesto);
+                return elementoLista;
+            };
+
             // Funzione per aggiornare la visualizzazione
             const aggiornaUI = () => {
-                let totaleSigarette = 0;
-                let totaleCaffe = 0;
+                const sigarette = transazioni.filter(t => t.tipo === 'sigaretta');
+                const caffe = transazioni.filter(t => t.tipo === 'caffe');
 
-                transazioni.forEach(t => {
-                    if (t.tipo === 'sigaretta') totaleSigarette++;
-                    if (t.tipo === 'caffe') totaleCaffe++;
-                });
-
-                const costoTotaleSigarette = totaleSigarette * COSTO_SIGARETTA;
-                const valoreTotaleCaffe = totaleCaffe * VALORE_CAFFE;
+                const costoTotaleSigarette = sigarette.length * COSTO_SIGARETTA;
+                const valoreTotaleCaffe = caffe.length * VALORE_CAFFE;
                 const saldo = costoTotaleSigarette - valoreTotaleCaffe;
 
-                // Aggiorna i display
-                conteggioSigaretteDisplay.textContent = totaleSigarette;
-                conteggioCaffeDisplay.textContent = totaleCaffe;
+                // Aggiorna i display principali
+                conteggioSigaretteDisplay.textContent = sigarette.length;
+                conteggioCaffeDisplay.textContent = caffe.length;
                 saldoDisplay.textContent = `€ ${saldo.toFixed(2)}`;
 
                 // Cambia colore del saldo
@@ -128,37 +152,24 @@
                     saldoDisplay.classList.add('text-white');
                 }
 
-
-                // Pulisci l'elenco precedente
-                elencoDisplay.innerHTML = '';
-
-                // Mostra/nascondi il messaggio di default
-                if (transazioni.length === 0) {
-                    const p = document.createElement('p');
-                    p.id = 'nessuna-transazione';
-                    p.className = 'text-gray-500 text-center py-4';
-                    p.textContent = 'Nessuna operazione registrata.';
-                    elencoDisplay.appendChild(p);
+                // Pulisci e popola la lista delle sigarette
+                elencoSigaretteDisplay.innerHTML = '';
+                elencoSigaretteDisplay.classList.remove('flex', 'items-center', 'justify-center');
+                if (sigarette.length === 0) {
+                    elencoSigaretteDisplay.classList.add('flex', 'items-center', 'justify-center');
+                    elencoSigaretteDisplay.innerHTML = '<p class="text-gray-500 text-center text-sm">Nessuna sigaretta.</p>';
                 } else {
-                     // Popola l'elenco in ordine decrescente (dal più recente)
-                    transazioni.slice().reverse().forEach(t => {
-                        const dataTransazione = new Date(t.timestamp);
-                        const dataFormattata = dataTransazione.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
-                        const oraFormattata = dataTransazione.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+                    sigarette.slice().reverse().forEach(t => elencoSigaretteDisplay.appendChild(creaElementoLista(t)));
+                }
 
-                        const icona = t.tipo === 'sigaretta' ? '🚬' : '☕';
-                        const testo = `${icona} ${dataFormattata} - ${oraFormattata}`;
-                        
-                        const elementoLista = document.createElement('div');
-                        elementoLista.className = 'bg-gray-700 p-3 rounded-lg flex justify-between items-center animate-fade-in';
-                        
-                        const spanTesto = document.createElement('span');
-                        spanTesto.className = 'text-gray-300';
-                        spanTesto.textContent = testo;
-                        
-                        elementoLista.appendChild(spanTesto);
-                        elencoDisplay.appendChild(elementoLista);
-                    });
+                // Pulisci e popola la lista dei caffè
+                elencoCaffeDisplay.innerHTML = '';
+                elencoCaffeDisplay.classList.remove('flex', 'items-center', 'justify-center');
+                 if (caffe.length === 0) {
+                    elencoCaffeDisplay.classList.add('flex', 'items-center', 'justify-center');
+                    elencoCaffeDisplay.innerHTML = '<p class="text-gray-500 text-center text-sm">Nessun caffè.</p>';
+                } else {
+                    caffe.slice().reverse().forEach(t => elencoCaffeDisplay.appendChild(creaElementoLista(t)));
                 }
             };
 
